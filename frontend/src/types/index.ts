@@ -53,6 +53,8 @@ export interface DocumentMeta {
 export interface ChatRequest {
   query: string;
   provider?: string;
+  /** Optional model override for the selected provider. */
+  model?: string;
   conversation_id?: string;
 }
 
@@ -78,5 +80,8 @@ export interface StreamEvent {
 export interface ProviderInfo {
   name: string;
   available: boolean;
+  /** Default model for this provider. */
   model?: string;
+  /** Selectable models (e.g. all pulled Ollama models). */
+  models?: string[];
 }

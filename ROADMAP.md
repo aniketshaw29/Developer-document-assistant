@@ -65,18 +65,18 @@
 **Goal:** Switch between OpenAI, Anthropic, and Ollama from the UI.
 
 ### Backend
-- [ ] LiteLLM integration (replace direct OpenAI calls)
-- [ ] Provider configuration (API keys per provider)
-- [ ] Provider switching endpoint (GET /providers, POST /providers/set)
-- [ ] Ollama support (local model detection)
-- [ ] Fallback logic (if provider fails, try next)
-- [ ] Embedding model per provider (OpenAI embeddings work across providers)
+- [x] LiteLLM integration (replace direct OpenAI calls)
+- [x] Provider configuration (API keys per provider)
+- [ ] Provider switching endpoint (POST /providers/set)
+- [x] Ollama support (local model detection + pulled-model listing)
+- [x] Fallback logic (if provider fails, try next)
+- [x] Embedding model fallback (OpenAI embeddings, else local Ollama)
 
 ### Frontend
-- [ ] Provider selector dropdown in composer
+- [x] Provider selector dropdown in composer (per provider + model)
 - [ ] Settings page/modal for API key configuration
-- [ ] Provider status indicators (connected/error)
-- [ ] Model name display per provider
+- [x] Provider status indicators (connected/error dots)
+- [x] Model name display per provider
 
 ### Deliverable
 - Toggle between GPT-4, Claude, and local LLaMA from the UI

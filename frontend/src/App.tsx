@@ -32,9 +32,6 @@ function App() {
       .catch(() => setProviders([]))
   }, [])
 
-  // Which providers are usable right now?
-  const activeProviders = providers.filter((p) => p.available).map((p) => p.name)
-
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800">
       {/* Sidebar */}
@@ -75,23 +72,30 @@ function App() {
         </div>
 
         <div className="border-t border-slate-200 p-3">
-          <p className="text-[11px] text-slate-400">
-            Provider:{' '}
-            {activeProviders.length > 0 ? (
-              <span className="font-medium text-slate-600">
-                {activeProviders.join(', ')}
-              </span>
-            ) : (
-              <span className="text-amber-600">
-                none configured — add an API key or start Ollama
-              </span>
-            )}
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            LLM providers
           </p>
+          <ul className="space-y-1">
+            {providers.map((p) => (
+              <li key={p.name} className="flex items-center gap-2 text-[11px]">
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${
+                    p.available ? 'bg-green-500' : 'bg-red-400'
+                  }`}
+                  title={p.available ? 'Available' : 'Not configured / offline'}
+                />
+                <span className="capitalize text-slate-600">{p.name}</span>
+                <span className="ml-auto truncate text-slate-400">
+                  {p.available ? p.model : 'offline'}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </aside>
 
       {/* Chat window */}
-      <ChatWindow />
+      <ChatWindow providers={providers} />
     </div>
   )
 }

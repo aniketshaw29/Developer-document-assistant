@@ -10,6 +10,7 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<string | undefined>(undefined)
+  const [model, setModel] = useState<string | undefined>(undefined)
   const conversationIdRef = useRef<string | null>(null)
   // Counter used to give each message a stable client-side id.
   const idRef = useRef(0)
@@ -33,7 +34,12 @@ export function useChat() {
 
     try {
       await streamChat(
-        { query, provider, conversation_id: conversationIdRef.current ?? undefined },
+        {
+          query,
+          provider,
+          model,
+          conversation_id: conversationIdRef.current ?? undefined,
+        },
         (event: StreamEvent) => {
           if (event.type === 'token') {
             // Accumulate streamed tokens onto the assistant message.
@@ -87,6 +93,21 @@ export function useChat() {
     setMessages([])
   }
 
+  /**
+   * Set provider + model from a single encoded dropdown value
+   * (format: "provider::model", or "" for auto).
+   */
+  function selectOption(encoded: string) {
+    if (!encoded) {
+      setProvider(undefined)
+      setModel(undefined)
+      return
+    }
+    const [providerName, modelName] = encoded.split('::')
+    setProvider(providerName)
+    setModel(modelName)
+  }
+
   /** Attach sources to a message (used for the non-streaming path). */
   function attachSources(messageId: string, sources: Source[]) {
     setMessages((prev) =>
@@ -99,6 +120,9 @@ export function useChat() {
     isStreaming,
     provider,
     setProvider,
+    model,
+    setModel,
+    selectOption,
     sendMessage,
     resetConversation,
     attachSources,

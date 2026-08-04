@@ -1,13 +1,26 @@
 import { RotateCcw } from 'lucide-react'
 import { useChat } from '../../hooks/useChat'
+import type { ProviderInfo } from '../../types'
 import MessageList from './MessageList'
 import Composer from './Composer'
+
+interface ChatWindowProps {
+  providers: ProviderInfo[]
+}
 
 /**
  * The main chat panel: header, scrollable message list, and composer.
  */
-export default function ChatWindow() {
-  const { messages, isStreaming, sendMessage, resetConversation } = useChat()
+export default function ChatWindow({ providers }: ChatWindowProps) {
+  const {
+    messages,
+    isStreaming,
+    provider,
+    model,
+    selectOption,
+    sendMessage,
+    resetConversation,
+  } = useChat()
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -28,7 +41,14 @@ export default function ChatWindow() {
       </div>
 
       <MessageList messages={messages} />
-      <Composer onSend={sendMessage} disabled={isStreaming} />
+      <Composer
+        onSend={sendMessage}
+        disabled={isStreaming}
+        providers={providers}
+        provider={provider}
+        model={model}
+        onSelectionChange={selectOption}
+      />
     </div>
   )
 }

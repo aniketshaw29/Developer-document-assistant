@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
 
     query: str = Field(..., min_length=1, description="The user's question")
     provider: str | None = Field(None, description="openai | anthropic | ollama")
+    model: str | None = Field(None, description="Optional model override for the provider")
     conversation_id: str | None = Field(None, description="Resume a conversation")
 
 
@@ -84,6 +85,7 @@ class ProviderInfo(BaseModel):
     name: str
     available: bool
     model: str | None = None
+    models: list[str] = Field(default_factory=list, description="Selectable models")
 
 
 class ProviderListResponse(BaseModel):

@@ -20,36 +20,69 @@ PROVIDER_DEFAULTS = {
 
 def _ollama_models_available() -> bool:
     """Return True if an Ollama server is reachable and lists models."""
+    return len(_ollama_models()) > 0
+
+
+def _ollama_models() -> list[str]:
+    """Return the names of models pulled on the local Ollama server."""
     try:
         resp = httpx.get(f"{settings.ollama_base_url}/api/tags", timeout=3.0)
         resp.raise_for_status()
-        models = resp.json().get("models", [])
-        return len(models) > 0
+        return [m.get("name", "") for m in resp.json().get("models", []) if m.get("name")]
     except Exception:
-        return False
+        return []
 
 
 def get_available_providers() -> list[dict]:
     """Return provider info with availability status for the settings panel."""
+    ollama_models = _ollama_models()
     providers = [
         {
             "name": "openai",
             "available": bool(settings.openai_api_key),
             "model": settings.default_model if settings.default_provider == "openai"
             else PROVIDER_DEFAULTS["openai"],
+            "models": [
+                settings.default_model if settings.default_provider == "openai"
+                else PROVIDER_DEFAULTS["openai"]
+            ],
         },
         {
             "name": "anthropic",
             "available": bool(settings.anthropic_api_key),
             "model": PROVIDER_DEFAULTS["anthropic"],
+            "models": [PROVIDER_DEFAULTS["anthropic"]],
         },
         {
             "name": "ollama",
-            "available": _ollama_models_available(),
+            "available": len(ollama_models) > 0,
             "model": PROVIDER_DEFAULTS["ollama"],
+            "models": ollama_models or [PROVIDER_DEFAULTS["ollama"]],
         },
     ]
     return providers
+
+
+def provider_priority(provider: str | None) -> list[str]:
+    """Order in which providers should be tried, most preferred first.
+
+    Used for fallback: the explicitly requested provider wins, then the
+    configured default, then any remaining available providers.
+    """
+    available = {p["name"] for p in get_available_providers() if p["available"]}
+    ordered: list[str] = []
+    for candidate in (provider, settings.default_provider):
+        if candidate in available and candidate not in ordered:
+            ordered.append(candidate)
+    for name in ("openai", "anthropic", "ollama"):
+        if name in available and name not in ordered:
+            ordered.append(name)
+    if not ordered:
+        raise NoProviderAvailableError(
+            "No LLM provider is configured. Set OPENAI_API_KEY or ANTHROPIC_API_KEY "
+            "in backend/.env, or start Ollama (ollama serve && ollama pull llama3.1)."
+        )
+    return ordered
 
 
 def resolve_model(provider: str, model: str | None) -> str:

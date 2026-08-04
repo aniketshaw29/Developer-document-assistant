@@ -27,6 +27,7 @@ def chat(req: ChatRequest) -> dict:
         return chat_service.answer_query(
             query=req.query,
             provider=req.provider,
+            model=req.model,
             conversation_id=req.conversation_id,
         )
     except (ConnectionError, RuntimeError) as exc:
@@ -40,6 +41,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
         chat_service.stream_answer(
             query=req.query,
             provider=req.provider,
+            model=req.model,
             conversation_id=req.conversation_id,
         ),
         media_type="text/event-stream",

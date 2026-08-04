@@ -14,7 +14,10 @@ from app.config import settings
 from app.core.dependencies import list_collections
 from app.rag.prompts import SYSTEM_PROMPT, build_rag_prompt
 from app.rag.retrieval import RetrievedChunk, retrieve
-from app.services.provider_service import resolve_model, validate_provider
+from app.services.provider_service import (
+    provider_priority,
+    resolve_model,
+)
 
 # In-memory conversation store: conversation_id -> list of chat messages.
 # Simple dict is fine for Phase 1; swap for Redis in a later phase.
@@ -78,6 +81,7 @@ def _sources_to_dict(chunks: list[RetrievedChunk]) -> list[dict]:
 def answer_query(
     query: str,
     provider: str | None = None,
+    model: str | None = None,
     conversation_id: str | None = None,
     collection_names: list[str] | None = None,
 ) -> dict:
@@ -93,7 +97,7 @@ def answer_query(
     else:
         user_message = build_rag_prompt(query, [c.text for c in chunks])
         messages.append({"role": "user", "content": user_message})
-        answer = _generate(messages, provider)
+        answer = _generate(messages, provider, model)
 
     # Keep the assistant turn in history and return a trimmed user message.
     messages.append({"role": "assistant", "content": answer})
@@ -104,26 +108,38 @@ def answer_query(
     }
 
 
-def _generate(messages: list[dict], provider: str | None) -> str:
-    """Call the LLM (synchronously) via LiteLLM and return the full text."""
+def _generate(messages: list[dict], provider: str | None, model: str | None = None) -> str:
+    """Call the LLM (synchronously) via LiteLLM with provider fallback.
+
+    Tries providers in priority order (requested -> default -> any
+    available). If a provider errors out (bad key, model down, rate
+    limit), the next available provider is used instead.
+    """
     import litellm
 
-    provider = validate_provider(provider)
-    model = _litellm_model_string(provider, None)
-    kwargs = _litellm_kwargs(provider)
-
-    response = litellm.completion(
-        model=model,
-        messages=messages,
-        temperature=0.2,
-        **kwargs,
-    )
-    return response.choices[0].message.content or ""
+    last_error: Exception | None = None
+    for name in provider_priority(provider):
+        model_string = _litellm_model_string(name, model)
+        kwargs = _litellm_kwargs(name)
+        try:
+            response = litellm.completion(
+                model=model_string,
+                messages=messages,
+                temperature=0.2,
+                **kwargs,
+            )
+            return response.choices[0].message.content or ""
+        except Exception as exc:  # Try the next provider on any LLM error.
+            last_error = exc
+    raise RuntimeError(
+        f"All LLM providers failed. Last error: {last_error}"
+    ) from last_error
 
 
 async def stream_answer(
     query: str,
     provider: str | None = None,
+    model: str | None = None,
     conversation_id: str | None = None,
     collection_names: list[str] | None = None,
 ) -> AsyncGenerator[str, None]:
@@ -152,33 +168,49 @@ async def stream_answer(
     user_message = build_rag_prompt(query, [c.text for c in chunks])
     messages.append({"role": "user", "content": user_message})
 
+    # Determine candidate providers up front; failure falls through below.
     try:
-        provider = validate_provider(provider)
+        candidates = provider_priority(provider)
     except RuntimeError as exc:
         yield _event("error", str(exc))
         yield _event("done", conversation_id=conv_id)
         return
-    model = _litellm_model_string(provider, None)
-    kwargs = _litellm_kwargs(provider)
 
-    # Stream the LLM response token by token.
-    stream = await litellm.acompletion(
-        model=model,
-        messages=messages,
-        temperature=0.2,
-        stream=True,
-        **kwargs,
-    )
+    last_error: Exception | None = None
+    for name in candidates:
+        model_string = _litellm_model_string(name, model)
+        kwargs = _litellm_kwargs(name)
+        try:
+            # Stream the LLM response token by token.
+            stream = await litellm.acompletion(
+                model=model_string,
+                messages=messages,
+                temperature=0.2,
+                stream=True,
+                **kwargs,
+            )
+        except Exception as exc:  # Try the next provider on any LLM error.
+            last_error = exc
+            continue
 
-    full_text = ""
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content if chunk.choices else ""
-        if delta:
-            full_text += delta
-            yield _event("token", delta)
+        full_text = ""
+        try:
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices else ""
+                if delta:
+                    full_text += delta
+                    yield _event("token", delta)
+        except Exception as exc:
+            # Mid-stream failure: discard partial output, try next provider.
+            last_error = exc
+            continue
 
-    messages.append({"role": "assistant", "content": full_text})
-    yield _event("sources", sources=_sources_to_dict(chunks))
+        messages.append({"role": "assistant", "content": full_text})
+        yield _event("sources", sources=_sources_to_dict(chunks))
+        yield _event("done", conversation_id=conv_id)
+        return
+
+    yield _event("error", f"All LLM providers failed. Last error: {last_error}")
     yield _event("done", conversation_id=conv_id)
 
 
