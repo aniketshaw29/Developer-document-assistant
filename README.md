@@ -24,6 +24,21 @@ ChatGPT for your codebases. Index documentation from GitHub repos, Swagger/OpenA
 - **Syntax highlighting** — highlighted code blocks with a copy button
 - **Rate limiting** — per-IP request limits to protect paid LLM endpoints
 
+## Screenshots
+
+> Place your demo captures in `docs/screenshots/` and reference them here.
+> See [`docs/DEMO.md`](docs/DEMO.md) for a step-by-step script to generate them.
+
+| | |
+|---|---|
+| Chat with citations | Code-block highlighting |
+| <img src="docs/screenshots/chat.png" alt="Chat view" width="400"/> | <img src="docs/screenshots/code.png" alt="Code block" width="400"/> |
+
+| | |
+|---|---|
+| Ingestion sidebar | Dark mode |
+| <img src="docs/screenshots/sidebar.png" alt="Sidebar" width="400"/> | <img src="docs/screenshots/dark.png" alt="Dark mode" width="400"/> |
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -169,6 +184,26 @@ cd backend && ../venv/bin/python -m pytest tests/ -q   # backend only
 - [`ROADMAP.md`](ROADMAP.md) — phased milestones
 - [`DEVELOPMENT_PLAN.md`](DEVELOPMENT_PLAN.md) — ordered implementation guide
 - [`SETUP.md`](SETUP.md) — detailed setup & troubleshooting
+- [`docs/DEMO.md`](docs/DEMO.md) — live demo script + suggested GitHub description
+
+## Contributing
+
+Contributions are welcome! This is a learning-focused project, so
+improvements, bug fixes, and documentation tweaks all help.
+
+1. Fork the repo and create a branch: `git checkout -b feature/my-feature`
+2. Make your changes and run the checks:
+   ```bash
+   make test          # backend tests + frontend typecheck/lint
+   ```
+3. Commit with a clear message and open a pull request.
+
+### Project conventions
+
+- Python 3.12, FastAPI, Pydantic v2; every module has a docstring.
+- TypeScript/React (no `any`); components are small and functional.
+- Keep endpoints thin — logic lives in `app/services/`.
+- Add tests alongside new backend behaviour (`backend/tests/`).
 
 ## Roadmap
 

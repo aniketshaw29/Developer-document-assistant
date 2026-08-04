@@ -99,7 +99,7 @@
 - [x] Sources panel (collapsible citation list per answer)
 - [x] Conversation history sidebar (resume + delete)
 - [x] Dark mode support (with OS-preference default)
-- [ ] Responsive layout (mobile-friendly)
+- [x] Responsive layout (mobile drawer sidebar)
 - [x] Keyboard shortcuts (Enter send, Escape clear input)
 - [x] Markdown syntax highlighting in code blocks (with copy button)
 - [x] Empty state illustrations
@@ -112,15 +112,15 @@
   - [x] Quick start guide
   - [x] API reference
   - [x] Tech stack badges
-  - [ ] Contributing section
+  - [x] Contributing section
 - [x] .gitignore
 - [x] .env.example with comments
-- [x] Makefile with dev commands
+- [x] Makefile with dev commands (incl. `make seed`)
 
 ### Demo Prep
-- [ ] Seed with real documentation (Spring Boot, Kubernetes, or Kafka docs)
+- [x] Seed with real documentation (`make seed` — Petstore + AWS Lambda guide)
 - [ ] Record demo GIF or video
-- [ ] Create impressive GitHub repo description and topics
+- [x] Demo script (`docs/DEMO.md`) + suggested GitHub description/topics
 
 ---
 

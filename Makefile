@@ -1,7 +1,7 @@
 # Developer Documentation Assistant — dev commands
 # Backend runs from a venv at ./venv; frontend is a Vite app in ./frontend.
 
-.PHONY: help setup venv install backend frontend dev test test-backend test-frontend lint build clean
+.PHONY: help setup venv install backend frontend dev test test-backend test-frontend lint build seed clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -36,6 +36,9 @@ lint: ## Lint the frontend
 
 build: ## Build the frontend for production
 	cd frontend && npm run build
+
+seed: ## Index demo sources (OpenAPI spec + docs repo). Requires an LLM/embedding provider.
+	cd backend && ../venv/bin/python scripts/seed_demo.py
 
 clean: ## Remove generated data, caches and built assets
 	rm -rf data/chroma backend/**/__pycache__ frontend/dist

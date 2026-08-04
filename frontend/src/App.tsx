@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookMarked, Moon, Sun } from 'lucide-react'
+import { BookMarked, Moon, Sun, X } from 'lucide-react'
 import type { ConversationSummary, ProviderInfo } from './types'
 import { deleteConversation, listConversations, listProviders } from './lib/api'
 import { useDocuments } from './hooks/useDocuments'
@@ -30,6 +30,7 @@ function App() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [isDark, setIsDark] = useState(initialTheme)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const chatRef = useRef<ChatWindowHandle>(null)
 
   const {
@@ -96,9 +97,22 @@ function App() {
   )
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
-      {/* Sidebar */}
-      <aside className="flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+      {/* Mobile backdrop behind the drawer */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — static on desktop, a slide-in drawer on mobile */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 md:static md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
           <div>
             <h1 className="flex items-center gap-2 text-base font-semibold">
@@ -109,15 +123,25 @@ function App() {
               ChatGPT for your codebases
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsDark((v) => !v)}
-            aria-label="Toggle dark mode"
-            title="Toggle dark mode"
-            className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-          >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsDark((v) => !v)}
+              aria-label="Toggle dark mode"
+              title="Toggle dark mode"
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
+              className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 md:hidden"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -137,7 +161,10 @@ function App() {
             <ConversationHistory
               conversations={conversations}
               activeId={activeConversationId}
-              onSelect={selectConversation}
+              onSelect={(id) => {
+                setSidebarOpen(false)
+                selectConversation(id)
+              }}
               onDelete={handleDeleteConversation}
             />
           </div>
@@ -185,6 +212,7 @@ function App() {
         ref={chatRef}
         providers={providers}
         onConversationChange={refreshConversations}
+        onOpenSidebar={() => setSidebarOpen(true)}
       />
     </div>
   )
