@@ -59,12 +59,17 @@ def list_collections() -> list[str]:
     return [c.name for c in client.list_collections()]
 
 
+class NoEmbeddingProviderError(RuntimeError):
+    """Raised when neither OpenAI nor Ollama embeddings are available."""
+
+
 def get_embed_model():
     """Return the embedding model, choosing the provider based on settings.
 
     OpenAI embeddings are used by default. If no OpenAI key is configured
     we fall back to a local Ollama embedding model so the app still works
-    fully offline (e.g. with `ollama pull nomic-embed-text`).
+    fully offline (e.g. with `ollama pull nomic-embed-text`). If neither
+    is available, raise a clear, user-facing error.
     """
     global _embed_model
     if _embed_model is None:

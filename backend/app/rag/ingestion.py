@@ -188,19 +188,26 @@ def ingest_documents(documents: Sequence[Document], collection_name: str) -> int
         name=collection_name, metadata={"hnsw:space": "cosine"}
     )
 
-    for i in range(0, len(ids), batch_size):
-        batch_ids = ids[i : i + batch_size]
-        batch_texts = texts[i : i + batch_size]
-        batch_metas = metadatas[i : i + batch_size]
-        embeddings = [
-            list(embedding)
-            for embedding in embed_model.get_text_embedding_batch(batch_texts)
-        ]
-        collection.upsert(
-            ids=batch_ids,
-            documents=batch_texts,
-            embeddings=embeddings,
-            metadatas=batch_metas,
-        )
+    try:
+        for i in range(0, len(ids), batch_size):
+            batch_ids = ids[i : i + batch_size]
+            batch_texts = texts[i : i + batch_size]
+            batch_metas = metadatas[i : i + batch_size]
+            embeddings = [
+                list(embedding)
+                for embedding in embed_model.get_text_embedding_batch(batch_texts)
+            ]
+            collection.upsert(
+                ids=batch_ids,
+                documents=batch_texts,
+                embeddings=embeddings,
+                metadatas=batch_metas,
+            )
+    except ConnectionError as exc:
+        # No embedding provider reachable (no OpenAI key, Ollama down).
+        raise ConnectionError(
+            "No embedding provider available. Set OPENAI_API_KEY in backend/.env "
+            "or start Ollama (ollama serve && ollama pull nomic-embed-text)."
+        ) from exc
 
     return len(ids)

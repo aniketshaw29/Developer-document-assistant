@@ -35,7 +35,14 @@ def retrieve(
     """
     client = get_chroma_client()
     embed_model = get_embed_model()
-    query_embedding = list(embed_model.get_query_embedding(query))
+    try:
+        query_embedding = list(embed_model.get_query_embedding(query))
+    except ConnectionError as exc:
+        # No embedding provider is reachable (no OpenAI key, Ollama down).
+        raise ConnectionError(
+            "No embedding provider available. Set OPENAI_API_KEY in backend/.env "
+            "or start Ollama (ollama serve && ollama pull nomic-embed-text)."
+        ) from exc
 
     # Decide which collections to search.
     all_collections = [c.name for c in client.list_collections()]
