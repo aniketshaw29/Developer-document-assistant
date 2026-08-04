@@ -53,6 +53,7 @@ class DocumentMeta(BaseModel):
     id: str
     title: str
     source_type: str
+    source: str | None = Field(None, description="Original URL for github/openapi docs")
     files_indexed: int
     chunks_created: int
     created_at: str

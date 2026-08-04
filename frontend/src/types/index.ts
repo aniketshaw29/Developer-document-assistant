@@ -39,6 +39,8 @@ export interface DocumentMeta {
   title: string;
   /** Source type: github | openapi | upload. */
   source_type: string;
+  /** Original URL for github/openapi documents (used for re-indexing). */
+  source?: string;
   /** Number of files indexed. */
   files_indexed: number;
   /** Number of chunks created. */

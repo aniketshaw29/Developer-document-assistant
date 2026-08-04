@@ -87,12 +87,28 @@ def is_indexable_file(path: str) -> bool:
     import os
 
     name = os.path.basename(path)
-    if name.startswith("."):
+    if name.startswith(".") and name not in (".env.example",):
+        return False
+    # Machine-generated lock files carry no retrievable knowledge.
+    if name in {
+        "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml",
+        "yarn.lock", "Cargo.lock", "Gemfile.lock", "poetry.lock",
+        "Pipfile.lock", "composer.lock", "go.sum",
+    }:
         return False
     ext = os.path.splitext(path)[1].lower()
     if ext in BINARY_EXTENSIONS:
         return False
-    return ext in CODE_LANGUAGES or ext in MARKDOWN_EXTENSIONS
+    # Files with known extensions.
+    if ext in CODE_LANGUAGES or ext in MARKDOWN_EXTENSIONS:
+        return True
+    # Extensionless common documentation files (README, CHANGELOG, etc.).
+    if not ext and name.upper() in {
+        "README", "CHANGELOG", "CHANGES", "HISTORY", "LICENSE",
+        "LICENSES", "CONTRIBUTING", "AUTHORS", "COPYING",
+    }:
+        return True
+    return False
 
 
 def make_document_id(collection_name: str, content: str) -> str:
@@ -126,10 +142,15 @@ def split_document(doc: Document) -> list[Document]:
     """Split a single source document into chunked sub-documents.
 
     Chunks inherit the source metadata (file path, repo, language, etc.)
-    so retrieval can attribute answers to exact sources.
+    so retrieval can attribute answers to exact sources. An explicit
+    `file_type` metadata value (e.g. "markdown") takes priority over the
+    file extension — used for converted content like OpenAPI markdown.
     """
+    file_type = doc.metadata.get("file_type", "")
     ext = ""
-    if doc.metadata.get("file_path"):
+    if file_type == "markdown":
+        ext = ".md"
+    elif doc.metadata.get("file_path"):
         match = re.search(r"\.[^./\\]+$", doc.metadata["file_path"])
         ext = match.group(0) if match else ""
     parser = _choose_splitter(ext)

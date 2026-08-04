@@ -47,12 +47,18 @@ def register_document(
     source_type: str,
     files_indexed: int,
     chunks_created: int,
+    source: str | None = None,
 ) -> dict:
-    """Add or update a document entry and return its metadata dict."""
+    """Add or update a document entry and return its metadata dict.
+
+    `source` holds the original URL (GitHub repo / OpenAPI spec) so the
+    document can be re-indexed later without user re-entry.
+    """
     entry = {
         "id": doc_id,
         "title": title,
         "source_type": source_type,
+        "source": source,
         "files_indexed": files_indexed,
         "chunks_created": chunks_created,
         "created_at": datetime.now(timezone.utc).isoformat(),

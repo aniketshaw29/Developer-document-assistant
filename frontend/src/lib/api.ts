@@ -83,6 +83,11 @@ export function listDocuments(): Promise<{ documents: DocumentMeta[] }> {
   return request('/documents');
 }
 
+/** Re-index an existing document from its stored source URL. */
+export function reindexDocument(id: string): Promise<DocumentMeta> {
+  return request(`/documents/${id}/reindex`, { method: 'POST' });
+}
+
 /** Delete an indexed document. */
 export function deleteDocument(id: string): Promise<{ deleted: boolean }> {
   return request(`/documents/${id}`, { method: 'DELETE' });

@@ -7,6 +7,7 @@ request bodies and schemas become retrievable documentation.
 
 import json
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 import yaml
@@ -16,16 +17,71 @@ from llama_index.core import Document
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
 
+def _validate_url(url: str) -> str:
+    """Validate and normalise a URL, raising ValueError if invalid."""
+    url = url.strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(
+            f"Invalid URL scheme: {parsed.scheme or 'none'}. "
+            "Only HTTP and HTTPS URLs are supported."
+        )
+    if not parsed.netloc:
+        raise ValueError(f"Invalid URL: {url}. Missing domain.")
+    return url
+
+
 def _fetch_spec(url: str) -> dict[str, Any]:
-    """Download and parse a spec URL into a dict (JSON or YAML)."""
-    with httpx.Client(timeout=30.0, follow_redirects=True) as client:
-        resp = client.get(url)
-        resp.raise_for_status()
+    """Download and parse a spec URL into a dict (JSON or YAML).
+
+    Raises:
+        ValueError: For invalid URLs or unrecognisable spec formats.
+        RuntimeError: For HTTP errors or parse failures.
+    """
+    _validate_url(url)
+    try:
+        with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+            resp = client.get(url)
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 404:
+            raise RuntimeError(
+                f"Spec not found at: {url}. Check the URL and try again."
+            ) from exc
+        if status == 403:
+            raise RuntimeError(
+                f"Access denied for: {url}. The server may require authentication."
+            ) from exc
+        raise RuntimeError(
+            f"HTTP {status} when fetching spec from: {url}"
+        ) from exc
+    except httpx.ConnectError as exc:
+        raise RuntimeError(
+            f"Could not connect to: {url}. Check your network and the URL."
+        ) from exc
+
     text = resp.text.strip()
+    if not text:
+        raise RuntimeError(f"Empty response from: {url}")
+
+    # Try JSON first (more reliable for large specs), then YAML.
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        return yaml.safe_load(text)
+        pass
+    try:
+        result = yaml.safe_load(text)
+        if not isinstance(result, dict):
+            raise RuntimeError(
+                f"Invalid YAML/JSON structure from: {url}. "
+                "Expected an OpenAPI spec object."
+            )
+        return result
+    except yaml.YAMLError as exc:
+        raise RuntimeError(
+            f"Could not parse spec from: {url}. Not valid JSON or YAML."
+        ) from exc
 
 
 def _schema_name(ref: str | None) -> str | None:
@@ -145,6 +201,7 @@ def parse_openapi_url(url: str) -> tuple[Document, dict]:
         text=markdown,
         metadata={
             "file_path": url,
+            "file_type": "markdown",  # Converted content is markdown, not code.
             "source_type": "openapi",
             "title": title,
             "spec_version": info.get("version", "unknown"),

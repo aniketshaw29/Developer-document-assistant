@@ -32,6 +32,15 @@ async def github_document(req: GithubIndexRequest) -> dict:
     """Clone a GitHub repository and index all its indexable files."""
     try:
         return document_service.index_github(req.repo_url, branch=req.branch)
+    except ConnectionError as exc:
+        # Embedding provider unavailable.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        # URL validation errors are client mistakes — 400 Bad Request.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        # Git clone failures (not found, auth required, etc.) — 422 Unprocessable.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=500, detail=f"GitHub ingestion failed: {exc}"
@@ -43,6 +52,15 @@ async def openapi_document(req: OpenApiIndexRequest) -> dict:
     """Fetch a Swagger/OpenAPI spec by URL and index it."""
     try:
         return document_service.index_openapi(req.spec_url)
+    except ConnectionError as exc:
+        # Embedding provider unavailable.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        # URL validation errors — 400 Bad Request.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        # HTTP errors or parse failures — 422 Unprocessable.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=500, detail=f"OpenAPI ingestion failed: {exc}"
@@ -53,6 +71,33 @@ async def openapi_document(req: OpenApiIndexRequest) -> dict:
 def list_docs() -> dict:
     """List all indexed documents."""
     return {"documents": [DocumentMeta(**d) for d in document_service.list_documents()]}
+
+
+@router.post("/{doc_id}/reindex", response_model=DocumentMeta)
+async def reindex_doc(doc_id: str) -> dict:
+    """Re-index an existing document from its stored source URL.
+
+    Replaces the collection contents so the document stays fresh as its
+    underlying source (GitHub repo / OpenAPI spec) changes.
+    """
+    try:
+        entry = document_service.reindex_document(doc_id)
+    except ConnectionError as exc:
+        # Embedding provider unavailable.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        # URL validation errors — 400 Bad Request.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        # Git clone / HTTP / parse failures — 422 Unprocessable.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Re-indexing failed: {exc}"
+        ) from exc
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"Document '{doc_id}' not found")
+    return entry
 
 
 @router.delete("/{doc_id}", response_model=dict)

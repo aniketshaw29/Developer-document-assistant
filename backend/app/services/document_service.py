@@ -17,6 +17,7 @@ from app.parsers.openapi import parse_openapi_url
 from app.parsers.pdf import extract_pdf
 from app.rag.ingestion import ingest_documents
 from app.services.document_registry import (
+    get_document,
     list_documents as registry_list,
     register_document,
     unregister_document,
@@ -38,6 +39,7 @@ def index_github(repo_url: str, branch: str | None = None) -> dict:
         doc_id=collection,
         title=repo_url,
         source_type="github",
+        source=repo_url,
         files_indexed=stats["files"],
         chunks_created=chunks,
     )
@@ -108,9 +110,27 @@ def index_openapi(spec_url: str) -> dict:
         doc_id=collection,
         title=stats["title"],
         source_type="openapi",
+        source=spec_url,
         files_indexed=1,
         chunks_created=chunks,
     )
+
+
+def reindex_document(doc_id: str) -> dict | None:
+    """Re-index an existing document from its stored source URL.
+
+    Uploaded documents carry no persistent source, so they return None
+    (the caller should return a 409 conflict). Raises the same errors as
+    the initial index for invalid/unavailable sources.
+    """
+    entry = get_document(doc_id)
+    if not entry:
+        return None
+    if entry["source_type"] == "github":
+        return index_github(entry.get("source", ""))
+    if entry["source_type"] == "openapi":
+        return index_openapi(entry.get("source", ""))
+    return None
 
 
 def _make_document(text: str, metadata: dict):

@@ -5,16 +5,18 @@ import {
   indexGithub,
   indexOpenApi,
   listDocuments,
+  reindexDocument,
   uploadFiles,
 } from '../lib/api'
 
 /**
  * Document state management: listing, indexing (upload / github / openapi),
- * and deletion. Keeps the sidebar in sync with the backend registry.
+ * re-indexing, and deletion. Keeps the sidebar in sync with the backend.
  */
 export function useDocuments() {
   const [documents, setDocuments] = useState<DocumentMeta[]>([])
   const [isIndexing, setIsIndexing] = useState(false)
+  const [reindexingId, setReindexingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   /** Reload the document list from the backend. */
@@ -50,6 +52,20 @@ export function useDocuments() {
   const addGithubRepo = (repoUrl: string) => withIndexing(() => indexGithub(repoUrl))
   const addOpenApiSpec = (specUrl: string) => withIndexing(() => indexOpenApi(specUrl))
 
+  /** Re-index a single document (github/openapi only) from its stored URL. */
+  const reindex = async (id: string) => {
+    setReindexingId(id)
+    setError(null)
+    try {
+      await reindexDocument(id)
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setReindexingId(null)
+    }
+  }
+
   const removeDocument = async (id: string) => {
     try {
       await deleteDocument(id)
@@ -62,11 +78,13 @@ export function useDocuments() {
   return {
     documents,
     isIndexing,
+    reindexingId,
     error,
     refresh,
     addFiles,
     addGithubRepo,
     addOpenApiSpec,
+    reindex,
     removeDocument,
   }
 }

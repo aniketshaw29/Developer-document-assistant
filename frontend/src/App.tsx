@@ -16,10 +16,12 @@ function App() {
   const {
     documents,
     isIndexing,
+    reindexingId,
     error,
     addFiles,
     addGithubRepo,
     addOpenApiSpec,
+    reindex,
     removeDocument,
   } = useDocuments()
 
@@ -63,7 +65,12 @@ function App() {
             <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
               Indexed documents
             </h2>
-            <DocumentList documents={documents} onDelete={removeDocument} />
+            <DocumentList
+              documents={documents}
+              onDelete={removeDocument}
+              onReindex={reindex}
+              reindexingId={reindexingId}
+            />
           </div>
         </div>
 

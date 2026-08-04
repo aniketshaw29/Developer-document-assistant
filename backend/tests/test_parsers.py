@@ -3,8 +3,9 @@
 from pathlib import Path
 
 from app.parsers.code import parse_code_file
+from app.parsers.github import _validate_github_url
 from app.parsers.markdown import parse_markdown_file
-from app.parsers.openapi import openapi_to_markdown
+from app.parsers.openapi import openapi_to_markdown, _validate_url
 from app.parsers.pdf import extract_pdf
 from app.rag.ingestion import is_indexable_file
 
@@ -78,7 +79,7 @@ def test_openapi_to_markdown():
         },
     }
     md = openapi_to_markdown(spec)
-    assert "POST ` /orders`" in md or "POST `/orders`" in md
+    assert "POST `/orders`" in md
     assert "Create an order" in md
     assert "Order" in md
 
@@ -89,3 +90,32 @@ def test_is_indexable_file():
     assert is_indexable_file("main.py")
     assert not is_indexable_file("image.png")
     assert not is_indexable_file(".hidden.py")
+
+
+def test_validate_github_url():
+    """GitHub URL validation accepts valid URLs and rejects invalid ones."""
+    assert _validate_github_url("https://github.com/kubernetes/kubernetes.git") == \
+        "https://github.com/kubernetes/kubernetes"
+    assert _validate_github_url("https://github.com/octocat/Hello-World") == \
+        "https://github.com/octocat/Hello-World"
+    assert _validate_github_url("not-a-url") is None
+    assert _validate_github_url("https://gitlab.com/owner/repo") is None
+    assert _validate_github_url("https://github.com/owner") is None
+
+
+def test_validate_openapi_url():
+    """OpenAPI URL validation accepts HTTP(S) and rejects others."""
+    assert _validate_url("https://petstore3.swagger.io/api/v3/openapi.json") == \
+        "https://petstore3.swagger.io/api/v3/openapi.json"
+    assert _validate_url("http://localhost:8080/spec.json") == \
+        "http://localhost:8080/spec.json"
+    try:
+        _validate_url("ftp://example.com/spec.json")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    try:
+        _validate_url("not-a-url")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
