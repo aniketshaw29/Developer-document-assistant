@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global base styles for the documentation assistant UI */
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  margin: 0;
+}
