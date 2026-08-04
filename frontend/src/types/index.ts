@@ -85,3 +85,22 @@ export interface ProviderInfo {
   /** Selectable models (e.g. all pulled Ollama models). */
   models?: string[];
 }
+
+/** Lightweight conversation entry for the history sidebar. */
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A full conversation including its message history. */
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  /** History messages (system prompt excluded) with role + content. */
+  messages: { role: string; content: string }[];
+  created_at: string;
+  updated_at: string;
+}

@@ -46,11 +46,11 @@ export default function DocumentList({
         return (
           <li
             key={doc.id}
-            className="group rounded-lg border border-slate-200 bg-white p-2"
+            className="group rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-start justify-between gap-1">
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-slate-700">
+                <p className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">
                   {doc.title}
                 </p>
                 <p className="mt-0.5 text-[11px] text-slate-400">
@@ -65,7 +65,7 @@ export default function DocumentList({
                     disabled={isReindexing}
                     aria-label={`Re-index ${doc.title}`}
                     title={isReindexing ? 'Re-indexing…' : 'Re-index from source'}
-                    className="rounded p-1 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-100"
+                    className="rounded p-1 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-100 dark:hover:bg-blue-950"
                   >
                     {isReindexing ? (
                       <Loader2 size={12} className="animate-spin text-blue-600" />
@@ -78,7 +78,7 @@ export default function DocumentList({
                   type="button"
                   onClick={() => onDelete(doc.id)}
                   aria-label={`Delete ${doc.title}`}
-                  className="rounded p-1 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+                  className="rounded p-1 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
                 >
                   <Trash2 size={12} />
                 </button>

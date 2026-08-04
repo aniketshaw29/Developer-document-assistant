@@ -89,33 +89,33 @@
 **Goal:** Portfolio-ready project with impressive demo, documentation, and UX.
 
 ### Backend
-- [ ] Conversation history (in-memory, keyed by conversation_id)
-- [ ] Rate limiting middleware
-- [ ] Request logging
-- [ ] Health check endpoint
-- [ ] OpenAPI docs at /docs (FastAPI auto-generated)
+- [x] Conversation history (in-memory, keyed by conversation_id)
+- [x] Rate limiting middleware
+- [x] Request logging middleware
+- [x] Health check endpoint
+- [x] OpenAPI docs at /docs (FastAPI auto-generated)
 
 ### Frontend
-- [ ] Sources panel (expandable citation sidebar)
-- [ ] Conversation history sidebar
-- [ ] Dark mode support
+- [x] Sources panel (collapsible citation list per answer)
+- [x] Conversation history sidebar (resume + delete)
+- [x] Dark mode support (with OS-preference default)
 - [ ] Responsive layout (mobile-friendly)
-- [ ] Keyboard shortcuts (Enter send, Escape clear)
-- [ ] Markdown syntax highlighting in code blocks
-- [ ] Empty state illustrations
-- [ ] Loading skeleton animations
+- [x] Keyboard shortcuts (Enter send, Escape clear input)
+- [x] Markdown syntax highlighting in code blocks (with copy button)
+- [x] Empty state illustrations
+- [x] Loading skeleton animations
 
 ### Documentation
-- [ ] README.md with:
-  - Project description + screenshots
-  - Architecture diagram (ASCII)
-  - Quick start guide
-  - API reference
-  - Tech stack badges
-  - Contributing section
-- [ ] .gitignore
-- [ ] .env.example with comments
-- [ ] Makefile with dev commands
+- [x] README.md with:
+  - [x] Project description + screenshots (screenshots pending)
+  - [x] Architecture diagram (ASCII)
+  - [x] Quick start guide
+  - [x] API reference
+  - [x] Tech stack badges
+  - [ ] Contributing section
+- [x] .gitignore
+- [x] .env.example with comments
+- [x] Makefile with dev commands
 
 ### Demo Prep
 - [ ] Seed with real documentation (Spring Boot, Kubernetes, or Kafka docs)

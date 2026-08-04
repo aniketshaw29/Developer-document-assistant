@@ -1,21 +1,29 @@
 import { useRef, useState } from 'react'
 import type { Message, Source, StreamEvent } from '../types'
-import { streamChat } from '../lib/api'
+import { getConversation, streamChat } from '../lib/api'
 
 /**
- * Chat state management: message history, streaming, and provider selection.
- * Supports both streaming (SSE) and non-streaming requests.
+ * Chat state management: message history, streaming, provider selection,
+ * and conversation loading (for the history sidebar).
  */
-export function useChat() {
+export function useChat(onConversationChange?: () => void) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [provider, setProvider] = useState<string | undefined>(undefined)
   const [model, setModel] = useState<string | undefined>(undefined)
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const conversationIdRef = useRef<string | null>(null)
   // Counter used to give each message a stable client-side id.
   const idRef = useRef(0)
 
   const nextId = () => `msg_${++idRef.current}`
+
+  /** Persist the conversation id (state + ref) and refresh the sidebar. */
+  function adoptConversation(id: string) {
+    conversationIdRef.current = id
+    setConversationId(id)
+    onConversationChange?.()
+  }
 
   /** Send a message and stream the assistant reply into the message list. */
   async function sendMessage(query: string) {
@@ -57,7 +65,7 @@ export function useChat() {
               ),
             )
           } else if (event.type === 'done' && event.conversation_id) {
-            conversationIdRef.current = event.conversation_id
+            adoptConversation(event.conversation_id)
           } else if (event.type === 'error') {
             setMessages((prev) =>
               prev.map((m) =>
@@ -90,7 +98,23 @@ export function useChat() {
   /** Clear all messages and start a fresh conversation. */
   function resetConversation() {
     conversationIdRef.current = null
+    setConversationId(null)
     setMessages([])
+    onConversationChange?.()
+  }
+
+  /** Load a past conversation from the backend and resume it. */
+  async function loadConversation(id: string) {
+    const detail = await getConversation(id)
+    conversationIdRef.current = id
+    setConversationId(id)
+    setMessages(
+      detail.messages.map((m, i) => ({
+        id: `hist_${id}_${i}`,
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content,
+      })),
+    )
   }
 
   /**
@@ -122,9 +146,11 @@ export function useChat() {
     setProvider,
     model,
     setModel,
+    conversationId,
     selectOption,
     sendMessage,
     resetConversation,
+    loadConversation,
     attachSources,
   }
 }

@@ -47,6 +47,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Logging and rate limiting (order matters: logging outermost so it also
+# records rate-limited requests).
+from app.middleware import RateLimitMiddleware, RequestLoggingMiddleware  # noqa: E402
+
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 
 @app.get("/health")
 def health() -> dict:

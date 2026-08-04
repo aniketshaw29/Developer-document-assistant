@@ -92,3 +92,29 @@ class ProviderListResponse(BaseModel):
     """Response body for GET /providers."""
 
     providers: list[ProviderInfo]
+
+
+class ConversationSummary(BaseModel):
+    """Lightweight conversation entry for the history sidebar."""
+
+    id: str
+    title: str
+    message_count: int
+    created_at: str
+    updated_at: str
+
+
+class ConversationDetail(BaseModel):
+    """A full conversation including its message history."""
+
+    id: str
+    title: str
+    messages: list[dict[str, Any]] = Field(default_factory=list)
+    created_at: str
+    updated_at: str
+
+
+class ConversationListResponse(BaseModel):
+    """Response body for GET /conversations."""
+
+    conversations: list[ConversationSummary]

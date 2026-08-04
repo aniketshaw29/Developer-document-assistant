@@ -54,21 +54,23 @@ export default function Composer({
   const currentValue = provider && model ? encodeOption(provider, model) : ''
 
   return (
-    <div className="border-t border-slate-200 bg-white p-4">
+    <div className="border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-3xl items-end gap-2">
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            // Enter sends unless Shift is held (newline).
+            // Enter sends unless Shift is held (newline). Escape clears.
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
               submit()
+            } else if (e.key === 'Escape') {
+              setValue('')
             }
           }}
           placeholder="Ask about your indexed documentation…"
           rows={1}
-          className="max-h-40 min-h-[2.5rem] flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-1 focus:ring-blue-200"
+          className="max-h-40 min-h-[2.5rem] flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400 focus:bg-white focus:ring-1 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:focus:bg-slate-800"
         />
         <select
           value={currentValue}
@@ -76,7 +78,7 @@ export default function Composer({
           disabled={disabled || available.length === 0}
           aria-label="LLM provider and model"
           title="LLM provider and model"
-          className="h-10 max-w-[10rem] rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600 outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 max-w-[10rem] rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600 outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
         >
           <option value="">
             {available.length === 0 ? 'No provider' : 'Auto'}
@@ -101,7 +103,7 @@ export default function Composer({
           <Send size={16} />
         </button>
       </div>
-      <p className="mx-auto mt-1.5 flex max-w-3xl items-center gap-1 text-[11px] text-slate-400">
+      <p className="mx-auto mt-1.5 flex max-w-3xl items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
         <Cpu size={11} />
         {available.length > 0
           ? `Model: ${provider ?? 'auto'}${model ? ` · ${model}` : ''}`

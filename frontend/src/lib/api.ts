@@ -1,6 +1,8 @@
 import type {
   ChatRequest,
   ChatResponse,
+  ConversationDetail,
+  ConversationSummary,
   DocumentMeta,
   ProviderInfo,
 } from '../types';
@@ -96,6 +98,21 @@ export function deleteDocument(id: string): Promise<{ deleted: boolean }> {
 /** List available LLM providers and their status. */
 export function listProviders(): Promise<{ providers: ProviderInfo[] }> {
   return request('/providers');
+}
+
+/** List past conversations, newest first. */
+export function listConversations(): Promise<{ conversations: ConversationSummary[] }> {
+  return request('/conversations');
+}
+
+/** Fetch a single conversation's full message history. */
+export function getConversation(id: string): Promise<ConversationDetail> {
+  return request(`/conversations/${id}`);
+}
+
+/** Delete a conversation. */
+export function deleteConversation(id: string): Promise<{ deleted: boolean }> {
+  return request(`/conversations/${id}`, { method: 'DELETE' });
 }
 
 /**

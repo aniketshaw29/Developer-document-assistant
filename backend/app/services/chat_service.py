@@ -8,6 +8,7 @@ is kept in memory keyed by conversation_id.
 import json
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from app.config import settings
@@ -19,25 +20,84 @@ from app.services.provider_service import (
     resolve_model,
 )
 
-# In-memory conversation store: conversation_id -> list of chat messages.
-# Simple dict is fine for Phase 1; swap for Redis in a later phase.
-_conversations: dict[str, list[dict]] = {}
+# In-memory conversation store: conversation_id -> conversation record.
+# A plain dict is fine for a single-process local demo; swap for Redis in
+# a future phase if conversations must survive restarts.
+@dataclass
+class Conversation:
+    """A chat thread: its message list plus display metadata."""
+
+    id: str
+    messages: list[dict] = field(default_factory=list)
+    title: str = "New chat"
+    created_at: str = ""
+    updated_at: str = ""
+
+    def touch(self, title: str | None = None) -> None:
+        """Update the activity timestamp and optionally the display title."""
+        self.updated_at = _now()
+        if title:
+            self.title = title
 
 
-def new_conversation() -> str:
-    """Create an empty conversation and return its id."""
-    conv_id = uuid.uuid4().hex[:12]
-    _conversations[conv_id] = [
-        {"role": "system", "content": SYSTEM_PROMPT}
-    ]
-    return conv_id
+_conversations: dict[str, Conversation] = {}
 
 
-def get_or_create_conversation(conversation_id: str | None) -> tuple[str, list[dict]]:
-    """Return (conversation_id, messages), creating a conversation if needed."""
+def _now() -> str:
+    """Current UTC timestamp in ISO format."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def new_conversation() -> Conversation:
+    """Create an empty conversation and return its record."""
+    conv = Conversation(id=uuid.uuid4().hex[:12], created_at=_now())
+    conv.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    conv.touch()
+    _conversations[conv.id] = conv
+    return conv
+
+
+def get_or_create_conversation(conversation_id: str | None) -> tuple[Conversation, list[dict]]:
+    """Return (record, messages), creating a conversation if needed."""
     if conversation_id and conversation_id in _conversations:
-        return conversation_id, _conversations[conversation_id]
-    return new_conversation(), _conversations[new_conversation()]
+        return _conversations[conversation_id], _conversations[conversation_id].messages
+    conv = new_conversation()
+    return conv, conv.messages
+
+
+def list_conversations() -> list[dict]:
+    """Return lightweight metadata for all conversations, newest first."""
+    return [
+        {
+            "id": conv.id,
+            "title": conv.title,
+            "message_count": max(0, len(conv.messages) - 1),  # exclude system msg
+            "created_at": conv.created_at,
+            "updated_at": conv.updated_at,
+        }
+        for conv in sorted(
+            _conversations.values(), key=lambda c: c.updated_at, reverse=True
+        )
+    ]
+
+
+def get_conversation(conversation_id: str) -> dict | None:
+    """Return a conversation's messages (system prompt excluded), or None."""
+    conv = _conversations.get(conversation_id)
+    if not conv:
+        return None
+    return {
+        "id": conv.id,
+        "title": conv.title,
+        "messages": [m for m in conv.messages if m["role"] != "system"],
+        "created_at": conv.created_at,
+        "updated_at": conv.updated_at,
+    }
+
+
+def delete_conversation(conversation_id: str) -> bool:
+    """Remove a conversation. Returns True if it existed."""
+    return _conversations.pop(conversation_id, None) is not None
 
 
 def _litellm_model_string(provider: str, model: str | None) -> str:
@@ -89,7 +149,7 @@ def answer_query(
     # Retrieve the most relevant chunks from the indexed docs.
     chunks = retrieve(query, collection_names=collection_names, n_results=10)
 
-    conv_id, messages = get_or_create_conversation(conversation_id)
+    conv, messages = get_or_create_conversation(conversation_id)
     if not chunks:
         # No indexed docs — fall back to a plain answer without context.
         messages.append({"role": "user", "content": query})
@@ -101,10 +161,11 @@ def answer_query(
 
     # Keep the assistant turn in history and return a trimmed user message.
     messages.append({"role": "assistant", "content": answer})
+    conv.touch(query)
     return {
         "answer": answer,
         "sources": _sources_to_dict(chunks),
-        "conversation_id": conv_id,
+        "conversation_id": conv.id,
     }
 
 
@@ -156,12 +217,14 @@ async def stream_answer(
         yield _event("done")
         return
 
-    conv_id, messages = get_or_create_conversation(conversation_id)
+    conv, messages = get_or_create_conversation(conversation_id)
+    conv_id = conv.id
 
     if not chunks:
         answer = "I don't have any indexed documentation yet. Upload files or index a repo first."
         yield _event("token", answer)
         yield _event("sources", sources=[])
+        conv.touch(query)
         yield _event("done", conversation_id=conv_id)
         return
 
@@ -206,6 +269,7 @@ async def stream_answer(
             continue
 
         messages.append({"role": "assistant", "content": full_text})
+        conv.touch(query)
         yield _event("sources", sources=_sources_to_dict(chunks))
         yield _event("done", conversation_id=conv_id)
         return

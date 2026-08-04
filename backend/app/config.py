@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     log_level: str = "info"
 
+    # === Rate limiting ===
+    rate_limit_requests: int = 60
+    rate_limit_window_seconds: int = 60
+
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
