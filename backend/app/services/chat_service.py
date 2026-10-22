@@ -103,13 +103,15 @@ def delete_conversation(conversation_id: str) -> bool:
 def _litellm_model_string(provider: str, model: str | None) -> str:
     """Prefix model with provider for LiteLLM routing where needed.
 
-    OpenAI and Anthropic models are passed through as-is; Ollama needs
-    the `ollama/` prefix plus the base URL.
+    OpenAI and Anthropic models are passed through as-is; Ollama and Gemini
+    need their respective prefixes plus any provider-specific config.
     """
     if provider == "ollama":
         base = resolve_model(provider, model)
-        # resolve_model already adds the prefix for ollama defaults.
         return base if base.startswith("ollama/") else f"ollama/{base}"
+    if provider == "gemini":
+        base = resolve_model(provider, model)
+        return base if base.startswith("gemini/") else f"gemini/{base}"
     return resolve_model(provider, model)
 
 
@@ -122,6 +124,8 @@ def _litellm_kwargs(provider: str) -> dict:
         kwargs["api_key"] = settings.openai_api_key
     elif provider == "anthropic" and settings.anthropic_api_key:
         kwargs["api_key"] = settings.anthropic_api_key
+    elif provider == "gemini" and settings.gemini_api_key:
+        kwargs["api_key"] = settings.gemini_api_key
     return kwargs
 
 

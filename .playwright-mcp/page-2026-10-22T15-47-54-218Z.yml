@@ -1,0 +1,39 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - heading "Docs Assistant" [level=1] [ref=e7]
+        - paragraph [ref=e11]: ChatGPT for your codebases
+      - button "Toggle dark mode" [ref=e13] [cursor=pointer]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - button "Files" [ref=e19] [cursor=pointer]
+          - button "GitHub" [ref=e24] [cursor=pointer]
+          - button "OpenAPI" [ref=e29] [cursor=pointer]
+        - generic [ref=e33] [cursor=pointer]:
+          - paragraph [ref=e38]: Drop files here or click to browse
+          - paragraph [ref=e39]: Markdown, PDF, code files
+      - generic [ref=e40]:
+        - heading "Chat history" [level=2] [ref=e41]
+        - paragraph [ref=e46]: No past chats yet. Ask a question to get started.
+      - generic [ref=e47]:
+        - heading "Indexed documents" [level=2] [ref=e48]
+        - paragraph [ref=e49]: No documents indexed yet. Use the upload panel above.
+    - generic [ref=e50]:
+      - paragraph [ref=e51]: LLM providers
+      - list
+  - generic [ref=e52]:
+    - generic [ref=e53]:
+      - heading "Documentation Chat" [level=1] [ref=e55]
+      - button "New chat" [disabled] [ref=e56]
+    - generic [ref=e61]:
+      - paragraph [ref=e65]: Ask a question about your documentation
+      - paragraph [ref=e66]: e.g. "How do I configure Kafka retry?" or "Which endpoint creates orders?"
+    - generic [ref=e67]:
+      - generic [ref=e68]:
+        - textbox "Ask about your indexed documentation…" [ref=e69]
+        - combobox "LLM provider and model" [disabled] [ref=e70]:
+          - option "No provider" [selected]
+        - button "Send message" [disabled] [ref=e71]
+      - paragraph [ref=e75]: No LLM provider configured — set an API key or start Ollama

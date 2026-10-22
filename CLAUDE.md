@@ -60,6 +60,7 @@ The Vite dev server proxies `/api` to `http://localhost:8000` — use `http://lo
 |---|---|---|
 | `OPENAI_API_KEY` | — | Required for OpenAI chat + embeddings |
 | `ANTHROPIC_API_KEY` | — | Anthropic chat only (embeddings still use OpenAI/Ollama) |
+| `GEMINI_API_KEY` | — | Google Gemini chat only (get key at aistudio.google.com; embeddings still use OpenAI/Ollama) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint |
 | `DEFAULT_PROVIDER` | `openai` | `openai \| anthropic \| ollama` |
 | `DEFAULT_MODEL` | `gpt-4o` | Model for the default provider |
@@ -87,7 +88,7 @@ Tests inject a `FakeEmbedModel` via `conftest.py` and isolate ChromaDB to a `tmp
 - **Conversations:** in-memory only (dict keyed by `conv.id`). Lost on server restart — by design for local use.
 - **SSE streaming:** `POST /api/v1/chat/stream` emits `{type: token|sources|error|done, ...}` events; the frontend drives rendering purely from these.
 - **Provider fallback:** if the requested LLM provider fails, the next available one is tried automatically (`provider_priority` in `provider_service.py`).
-- **Embeddings:** always use OpenAI if `OPENAI_API_KEY` is set; otherwise fall back to Ollama `nomic-embed-text`. Anthropic has no embeddings API.
+- **Embeddings:** always use OpenAI if `OPENAI_API_KEY` is set; otherwise fall back to Ollama `nomic-embed-text`. Anthropic and Gemini have no embeddings integration here.
 - **Chunking:** code files use `CodeSplitter` (tree-sitter, 40 lines/chunk), markdown uses `MarkdownNodeParser` (heading-aware), everything else uses `SentenceSplitter` (512 tokens).
 - **No test comments / docstring prose** — keep inline comments to non-obvious WHY, not WHAT.
 

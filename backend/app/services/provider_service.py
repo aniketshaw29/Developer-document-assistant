@@ -14,6 +14,7 @@ from app.config import settings
 PROVIDER_DEFAULTS = {
     "openai": "gpt-4o",
     "anthropic": "claude-sonnet-5-5",
+    "gemini": "gemini-2.0-flash",
     "ollama": "llama3.1",
 }
 
@@ -54,6 +55,12 @@ def get_available_providers() -> list[dict]:
             "models": [PROVIDER_DEFAULTS["anthropic"]],
         },
         {
+            "name": "gemini",
+            "available": bool(settings.gemini_api_key),
+            "model": PROVIDER_DEFAULTS["gemini"],
+            "models": [PROVIDER_DEFAULTS["gemini"]],
+        },
+        {
             "name": "ollama",
             "available": len(ollama_models) > 0,
             "model": PROVIDER_DEFAULTS["ollama"],
@@ -74,7 +81,7 @@ def provider_priority(provider: str | None) -> list[str]:
     for candidate in (provider, settings.default_provider):
         if candidate in available and candidate not in ordered:
             ordered.append(candidate)
-    for name in ("openai", "anthropic", "ollama"):
+    for name in ("openai", "anthropic", "gemini", "ollama"):
         if name in available and name not in ordered:
             ordered.append(name)
     if not ordered:
@@ -88,13 +95,15 @@ def provider_priority(provider: str | None) -> list[str]:
 def resolve_model(provider: str, model: str | None) -> str:
     """Resolve the effective model string for a provider.
 
-    Ollama models are prefixed with the provider so LiteLLM routes them.
+    Ollama and Gemini models are prefixed with the provider so LiteLLM routes them.
     """
     if model:
         return model
     default = PROVIDER_DEFAULTS.get(provider)
     if provider == "ollama":
         return f"ollama/{default}"
+    if provider == "gemini":
+        return f"gemini/{default}"
     return default or "gpt-4o"
 
 
