@@ -125,7 +125,7 @@ def _choose_splitter(ext: str):
     ext = ext.lower()
     if ext in MARKDOWN_EXTENSIONS:
         # MarkdownNodeParser splits on heading boundaries, preserving structure.
-        return MarkdownNodeParser(chunk_size=512, chunk_overlap=50)
+        return MarkdownNodeParser()
     if ext in CODE_LANGUAGES:
         # CodeSplitter uses tree-sitter to split at function/class boundaries.
         return CodeSplitter(

@@ -13,7 +13,7 @@ from app.config import settings
 # Provider -> default model name used when the client does not pick one.
 PROVIDER_DEFAULTS = {
     "openai": "gpt-4o",
-    "anthropic": "claude-sonnet-4-20250514",
+    "anthropic": "claude-sonnet-5-5",
     "ollama": "llama3.1",
 }
 

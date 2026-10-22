@@ -79,8 +79,14 @@ def get_embed_model():
             )
         else:
             # Offline fallback: requires `ollama pull nomic-embed-text`.
+            # settings.embedding_model is an OpenAI model name; Ollama uses nomic-embed-text.
+            ollama_embed_model = (
+                settings.embedding_model
+                if not settings.embedding_model.startswith("text-embedding")
+                else "nomic-embed-text"
+            )
             _embed_model = OllamaEmbedding(
-                model_name=settings.embedding_model,
+                model_name=ollama_embed_model,
                 base_url=settings.ollama_base_url,
             )
     return _embed_model
