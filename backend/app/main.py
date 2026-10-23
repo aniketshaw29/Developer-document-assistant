@@ -24,6 +24,13 @@ async def lifespan(app: FastAPI):
     """
     logging.basicConfig(level=settings.log_level.upper())
     logging.getLogger("uvicorn").info("Developer Documentation Assistant starting up...")
+
+    # Let LiteLLM silently drop params a given model doesn't support (e.g.
+    # reasoning models reject custom `temperature`) so any model "just works".
+    import litellm
+
+    litellm.drop_params = True
+
     yield
     logging.getLogger("uvicorn").info("Shutting down...")
 

@@ -13,8 +13,8 @@ class ChatRequest(BaseModel):
     """Body for POST /chat and POST /chat/stream."""
 
     query: str = Field(..., min_length=1, description="The user's question")
-    provider: str | None = Field(None, description="openai | anthropic | ollama")
-    model: str | None = Field(None, description="Optional model override for the provider")
+    provider: str | None = Field(None, description="Provider group, e.g. openai | anthropic | gemini")
+    model: str | None = Field(None, description="Optional model id override (any id the gateway/provider exposes)")
     conversation_id: str | None = Field(None, description="Resume a conversation")
 
 

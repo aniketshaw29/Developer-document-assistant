@@ -101,11 +101,15 @@ def delete_conversation(conversation_id: str) -> bool:
 
 
 def _litellm_model_string(provider: str, model: str | None) -> str:
-    """Prefix model with provider for LiteLLM routing where needed.
+    """Build the LiteLLM model string for a chat call.
 
-    OpenAI and Anthropic models are passed through as-is; Ollama and Gemini
-    need their respective prefixes plus any provider-specific config.
+    Gateway mode: the gateway is OpenAI-compatible, so the model id is used
+    verbatim behind the ``openai/`` prefix (provider is only a UI grouping).
+    Direct mode: Ollama and Gemini need their own prefixes; others pass through.
     """
+    if settings.gateway_enabled:
+        chosen = model or settings.llm_model
+        return f"openai/{chosen}"
     if provider == "ollama":
         base = resolve_model(provider, model)
         return base if base.startswith("ollama/") else f"ollama/{base}"
@@ -116,7 +120,9 @@ def _litellm_model_string(provider: str, model: str | None) -> str:
 
 
 def _litellm_kwargs(provider: str) -> dict:
-    """Extra kwargs for LiteLLM per provider (API keys / base URLs)."""
+    """Extra kwargs for LiteLLM per mode/provider (API keys / base URLs)."""
+    if settings.gateway_enabled:
+        return {"api_base": settings.llm_base_url, "api_key": settings.llm_api_key}
     kwargs: dict = {}
     if provider == "ollama":
         kwargs["api_base"] = settings.ollama_base_url

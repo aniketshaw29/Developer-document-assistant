@@ -60,26 +60,64 @@ def list_collections() -> list[str]:
 
 
 class NoEmbeddingProviderError(RuntimeError):
-    """Raised when neither OpenAI nor Ollama embeddings are available."""
+    """Raised when no embedding provider is available."""
+
+
+class _GatewayEmbedding:
+    """Embeddings via an OpenAI-compatible gateway (e.g. a LiteLLM proxy).
+
+    Routes every embedding call through the single configured endpoint using
+    LiteLLM's OpenAI-compatible path (``openai/<model>`` + api_base + api_key).
+    Implements the subset of the LlamaIndex embedding interface used by the
+    ingestion and retrieval pipelines.
+    """
+
+    def __init__(self, base_url: str, api_key: str, model: str):
+        self._base_url = base_url
+        self._api_key = api_key
+        self._model = f"openai/{model}"
+
+    def _embed(self, texts: list[str]) -> list[list[float]]:
+        import litellm
+
+        response = litellm.embedding(
+            model=self._model,
+            input=texts,
+            api_base=self._base_url,
+            api_key=self._api_key,
+        )
+        return [item["embedding"] for item in response["data"]]
+
+    def get_text_embedding(self, text: str) -> list[float]:
+        return self._embed([text])[0]
+
+    def get_query_embedding(self, text: str) -> list[float]:
+        return self.get_text_embedding(text)
+
+    def get_text_embedding_batch(self, texts: list[str]) -> list[list[float]]:
+        return self._embed(texts)
 
 
 def get_embed_model():
     """Return the embedding model, choosing the provider based on settings.
 
-    OpenAI embeddings are used by default. If no OpenAI key is configured
-    we fall back to a local Ollama embedding model so the app still works
-    fully offline (e.g. with `ollama pull nomic-embed-text`). If neither
-    is available, raise a clear, user-facing error.
+    Priority: gateway (if LLM_BASE_URL is set) → OpenAI → Gemini →
+    Ollama (local fallback, requires `ollama pull nomic-embed-text`).
     """
     global _embed_model
     if _embed_model is None:
-        if settings.openai_api_key:
+        if settings.gateway_enabled:
+            _embed_model = _GatewayEmbedding(
+                base_url=settings.llm_base_url,
+                api_key=settings.llm_api_key,
+                model=settings.embedding_model,
+            )
+        elif settings.openai_api_key:
             _embed_model = OpenAIEmbedding(
                 model=settings.embedding_model, api_key=settings.openai_api_key
             )
         else:
-            # Offline fallback: requires `ollama pull nomic-embed-text`.
-            # settings.embedding_model is an OpenAI model name; Ollama uses nomic-embed-text.
+            # Local fallback: requires `ollama pull nomic-embed-text`.
             ollama_embed_model = (
                 settings.embedding_model
                 if not settings.embedding_model.startswith("text-embedding")

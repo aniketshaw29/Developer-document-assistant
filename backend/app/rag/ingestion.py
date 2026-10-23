@@ -227,7 +227,7 @@ def ingest_documents(documents: Sequence[Document], collection_name: str) -> int
     except ConnectionError as exc:
         # No embedding provider reachable (no OpenAI key, Ollama down).
         raise ConnectionError(
-            "No embedding provider available. Set OPENAI_API_KEY in backend/.env "
+            "No embedding provider available. Set OPENAI_API_KEY or GEMINI_API_KEY in backend/.env "
             "or start Ollama (ollama serve && ollama pull nomic-embed-text)."
         ) from exc
 

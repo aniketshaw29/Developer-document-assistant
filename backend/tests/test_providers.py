@@ -123,3 +123,62 @@ def test_generate_raises_when_all_providers_fail(monkeypatch):
 
     with pytest.raises(RuntimeError, match="All LLM providers failed"):
         chat_service._generate([{"role": "user", "content": "hi"}], "openai")
+
+
+def test_gateway_mode_routes_model_through_endpoint(monkeypatch):
+    """In gateway mode every model goes through the OpenAI-compatible endpoint."""
+    import litellm
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "llm_base_url", "http://gw.local/v1")
+    monkeypatch.setattr(settings, "llm_api_key", "vk-123")
+
+    seen = {}
+
+    def completion(model, messages, temperature, **kwargs):
+        seen["model"] = model
+        seen["api_base"] = kwargs.get("api_base")
+        seen["api_key"] = kwargs.get("api_key")
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="ok"))]
+        )
+
+    monkeypatch.setattr(litellm, "completion", completion)
+    monkeypatch.setattr(
+        "app.services.provider_service.get_available_providers",
+        lambda: [{"name": "gemini", "available": True, "model": "gemini-2.5-flash"}],
+    )
+
+    result = chat_service._generate(
+        [{"role": "user", "content": "hi"}], "gemini", model="gemini-2.5-flash"
+    )
+    assert result == "ok"
+    # Model id is used verbatim behind the openai/ prefix; creds come from the gateway.
+    assert seen["model"] == "openai/gemini-2.5-flash"
+    assert seen["api_base"] == "http://gw.local/v1"
+    assert seen["api_key"] == "vk-123"
+
+
+def test_gateway_mode_groups_models_by_inferred_provider(monkeypatch):
+    """The gateway catalog is grouped into logical providers for the UI."""
+    from app.config import settings
+    from app.services import provider_service as ps
+
+    monkeypatch.setattr(settings, "llm_base_url", "http://gw.local/v1")
+    monkeypatch.setattr(
+        ps,
+        "gateway_models",
+        lambda: [
+            "gpt-5",
+            "anthropic--claude-4.6-sonnet",
+            "gemini-2.5-flash",
+            "text-embedding-3-small",  # embedding — excluded from chat list
+        ],
+    )
+
+    providers = {p["name"]: p for p in ps.get_available_providers()}
+    assert set(providers) == {"openai", "anthropic", "gemini"}
+    assert all(p["available"] for p in providers.values())
+    # Embedding model must not appear as a selectable chat model.
+    all_models = [m for p in providers.values() for m in p["models"]]
+    assert "text-embedding-3-small" not in all_models

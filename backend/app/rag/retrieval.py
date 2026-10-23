@@ -34,21 +34,24 @@ def retrieve(
     If `collection_names` is None, searches every collection (all indexed docs).
     """
     client = get_chroma_client()
+
+    # Decide which collections to search before attempting any embedding —
+    # avoid a needless (and potentially failing) embedding call when nothing
+    # is indexed yet.
+    all_collections = [c.name for c in client.list_collections()]
+    targets = collection_names if collection_names else all_collections
+    if not targets:
+        return []
+
     embed_model = get_embed_model()
     try:
         query_embedding = list(embed_model.get_query_embedding(query))
     except ConnectionError as exc:
         # No embedding provider is reachable (no OpenAI key, Ollama down).
         raise ConnectionError(
-            "No embedding provider available. Set OPENAI_API_KEY in backend/.env "
+            "No embedding provider available. Set OPENAI_API_KEY or GEMINI_API_KEY in backend/.env "
             "or start Ollama (ollama serve && ollama pull nomic-embed-text)."
         ) from exc
-
-    # Decide which collections to search.
-    all_collections = [c.name for c in client.list_collections()]
-    targets = collection_names if collection_names else all_collections
-    if not targets:
-        return []
 
     results: list[RetrievedChunk] = []
     for name in targets:

@@ -37,6 +37,20 @@ def fake_embed_model(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def force_direct_mode(monkeypatch):
+    """Default tests to direct (per-provider) mode, not the live gateway.
+
+    The real .env may point at a LiteLLM gateway; provider/chat tests assert
+    direct-mode routing and must not depend on an external proxy being up.
+    Gateway-specific tests opt back in by setting `settings.llm_base_url`.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "llm_base_url", "")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def temp_chroma_dir(monkeypatch, tmp_path):
     """Isolate ChromaDB state per test in a temporary directory.
 

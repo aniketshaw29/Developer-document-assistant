@@ -56,20 +56,45 @@ The Vite dev server proxies `/api` to `http://localhost:8000` — use `http://lo
 
 ## Configuration (`backend/.env`)
 
+There are two ways to connect an LLM. **Gateway mode** is preferred and takes
+priority whenever `LLM_BASE_URL` is set.
+
+### Gateway mode (recommended)
+
+One OpenAI-compatible endpoint (e.g. a LiteLLM proxy) serves every model —
+chat *and* embeddings — behind a single key. Any model id the gateway exposes
+"just works"; the UI's provider dropdown is built by grouping the gateway's
+`/models` catalog into logical providers (inferred from model-name prefixes).
+
 | Variable | Default | Notes |
 |---|---|---|
-| `OPENAI_API_KEY` | — | Required for OpenAI chat + embeddings |
-| `ANTHROPIC_API_KEY` | — | Anthropic chat only (embeddings still use OpenAI/Ollama) |
-| `GEMINI_API_KEY` | — | Google Gemini chat only (get key at aistudio.google.com; embeddings still use OpenAI/Ollama) |
+| `LLM_BASE_URL` | — | OpenAI-compatible endpoint incl. version path, e.g. `http://localhost:6655/litellm/v1`. Set this to enable gateway mode. |
+| `LLM_API_KEY` | — | Virtual key the gateway requires |
+| `LLM_MODEL` | `gpt-4o` | Default chat model when the client picks none (any catalog id) |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model id exposed by the gateway |
+
+### Direct mode (used only when `LLM_BASE_URL` is empty)
+
+| Variable | Default | Notes |
+|---|---|---|
+| `OPENAI_API_KEY` | — | OpenAI chat + embeddings |
+| `ANTHROPIC_API_KEY` | — | Anthropic chat only (embeddings use OpenAI/Ollama) |
+| `GEMINI_API_KEY` | — | Google Gemini chat (get key at aistudio.google.com) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama endpoint |
-| `DEFAULT_PROVIDER` | `openai` | `openai \| anthropic \| ollama` |
+| `DEFAULT_PROVIDER` | `openai` | `openai \| anthropic \| gemini \| ollama` |
 | `DEFAULT_MODEL` | `gpt-4o` | Model for the default provider |
-| `EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model; Ollama fallback uses `nomic-embed-text` |
+
+### Shared
+
+| Variable | Default | Notes |
+|---|---|---|
 | `CHROMA_PERSIST_DIR` | `../data/chroma` | Relative to `backend/` |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated |
 | `RATE_LIMIT_REQUESTS` | `60` | Requests per window per IP |
 
-**Minimum requirement:** at least one of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or a running Ollama server with a chat model pulled (`ollama pull llama3.1`) and an embedding model pulled (`ollama pull nomic-embed-text`).
+**Minimum requirement:** either `LLM_BASE_URL` + `LLM_API_KEY` (gateway), or one
+of `OPENAI_API_KEY` / `GEMINI_API_KEY`, or a running Ollama server with a chat
+model (`ollama pull llama3.1`) and embedding model (`ollama pull nomic-embed-text`).
 
 ## Testing
 
@@ -87,8 +112,9 @@ Tests inject a `FakeEmbedModel` via `conftest.py` and isolate ChromaDB to a `tmp
 - **Document registry:** `data/documents.json` stores display metadata. ChromaDB stores vectors. They're kept in sync by `document_service.py`.
 - **Conversations:** in-memory only (dict keyed by `conv.id`). Lost on server restart — by design for local use.
 - **SSE streaming:** `POST /api/v1/chat/stream` emits `{type: token|sources|error|done, ...}` events; the frontend drives rendering purely from these.
-- **Provider fallback:** if the requested LLM provider fails, the next available one is tried automatically (`provider_priority` in `provider_service.py`).
-- **Embeddings:** always use OpenAI if `OPENAI_API_KEY` is set; otherwise fall back to Ollama `nomic-embed-text`. Anthropic and Gemini have no embeddings integration here.
+- **Provider fallback:** if the requested model/provider fails, the next available one is tried automatically (`provider_priority` in `provider_service.py`).
+- **Embeddings:** in gateway mode, routed through `LLM_BASE_URL` using `EMBEDDING_MODEL`. In direct mode, OpenAI if `OPENAI_API_KEY` is set, else Ollama `nomic-embed-text`.
+- **Any model "just works":** `litellm.drop_params = True` (set at startup) silently drops params a model rejects — e.g. reasoning models like gpt-5 that reject custom `temperature`.
 - **Chunking:** code files use `CodeSplitter` (tree-sitter, 40 lines/chunk), markdown uses `MarkdownNodeParser` (heading-aware), everything else uses `SentenceSplitter` (512 tokens).
 - **No test comments / docstring prose** — keep inline comments to non-obvious WHY, not WHAT.
 

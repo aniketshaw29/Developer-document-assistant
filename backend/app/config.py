@@ -19,16 +19,30 @@ class Settings(BaseSettings):
     (e.g. `OPENAI_API_KEY` -> `settings.OPENAI_API_KEY`).
     """
 
-    # === LLM providers ===
+    # === LLM gateway (OpenAI-compatible endpoint, e.g. a LiteLLM proxy) ===
+    # When `llm_base_url` is set, ALL chat and embedding calls route through
+    # this single endpoint with one key — any model the gateway exposes works,
+    # regardless of its underlying provider (OpenAI, Anthropic, Gemini, ...).
+    # Leave it empty to fall back to direct per-provider SDKs below.
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = "gpt-4o"  # Default chat model when the client picks none.
+
+    # === Direct providers (used only when llm_base_url is empty) ===
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
-    # === Default provider / model ===
-    default_provider: str = "openai"  # openai | anthropic | ollama
+    # === Default provider / model (direct mode) ===
+    default_provider: str = "openai"  # openai | anthropic | gemini | ollama
     default_model: str = "gpt-4o"
     embedding_model: str = "text-embedding-3-small"
+
+    @property
+    def gateway_enabled(self) -> bool:
+        """True when a gateway endpoint is configured (gateway mode)."""
+        return bool(self.llm_base_url)
 
     # === Storage ===
     # ChromaDB persistence directory, resolved relative to the backend dir.
